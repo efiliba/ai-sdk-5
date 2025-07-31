@@ -4,6 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRouter } from "next/navigation";
 import { Message } from "@/types";
+import { useAutoResume } from "./use-auto-resume";
 
 interface Props {
   chatId: string;
@@ -37,6 +38,17 @@ export const Chat = ({ chatId, isNewChat, initialMessages }: Props) => {
     });
   };
 
+  // useAutoResume({
+  //   autoResume: true,
+  //   initialMessages,
+  //   setMessages,
+  //   chatId,
+  // });
+
+  // console.log(
+  //   "--------------> chat:initialMessages",
+  //   JSON.stringify(initialMessages)
+  // );
   return (
     <div className="font-sans grid items-center justify-items-center p-8 gap-10">
       <button

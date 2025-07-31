@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PlusIcon } from "lucide-react";
 
 import { Chat } from "./chat";
-import { Message } from "@/types";
+import { getChatMessages } from "@/server/db/queries";
 
 export default async function Home({
   searchParams,
@@ -10,9 +10,12 @@ export default async function Home({
   searchParams: Promise<{ id?: string }>;
 }) {
   const { id } = await searchParams;
-
-  const initialMessages: Message[] = []; // Get messages from db
-
+  // if (!id) {
+  //   console.log("PAGE --------------> id is undefined");
+  // } else {
+  //   console.log("PAGE --------------> id DEFINED");
+  // }
+  const chatId = id ?? crypto.randomUUID();
   return (
     <div className="font-sans grid items-center justify-items-center p-8 gap-10">
       <Link
@@ -23,9 +26,10 @@ export default async function Home({
         <PlusIcon className="size-5" />
       </Link>
       <Chat
-        chatId={id ?? crypto.randomUUID()}
-        isNewChat={id === undefined}
-        initialMessages={initialMessages}
+        key={id}
+        chatId={chatId}
+        isNewChat={!id}
+        initialMessages={await getChatMessages(id)}
       />
     </div>
   );
