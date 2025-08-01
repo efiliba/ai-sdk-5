@@ -1,12 +1,13 @@
 "use client";
 
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DefaultChatTransport } from "ai";
+import { useChat } from "@ai-sdk/react";
+import { Loader2 } from "lucide-react";
+
 import { Message } from "@/types";
 import { useAutoResume } from "../use-auto-resume";
-import { Loader2 } from "lucide-react";
-import { useRef, useState } from "react";
 
 interface Props {
   chatId: string;
@@ -32,15 +33,15 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
           router.push(`?id=${data.chatId}`);
           break;
         case "data-title-updated":
-          console.log("------------------> data-title-updated", data.title);
+          console.log("Title updated", data.title);
+          router.refresh(); // Refresh the sidebar to show the new title
           break;
       }
     },
   });
 
-  const [input, setInput] = useState("Some message");
+  const [input, setInput] = useState("");
 
-  const count = useRef(1);
   const handleSubmitMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -49,7 +50,7 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
       metadata: { test: "Send metadata to server on each message" },
     });
 
-    setInput(`Some message ${count.current++}`);
+    setInput("");
   };
 
   useAutoResume({
@@ -121,7 +122,6 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
             </div>
           ))}
         </div>
-        <div className="border-t border-gray-700"></div>
       </div>
     </div>
   );
