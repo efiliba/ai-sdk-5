@@ -22,21 +22,20 @@ const streamContext = createResumableStreamContext({
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const { messages, chatId, isNewChat } = JSON.parse(await request.text()) as {
+  const { messages, chatId } = JSON.parse(await request.text()) as {
     messages: Message[];
     chatId: string;
-    isNewChat: boolean;
   };
 
-  // const { isNewChat } = currentMessage?.metadata ?? { isNewChat: true };
+  const firstChat = messages.length === 1; // Or check db if chatId exists
 
-  console.log(
-    "--------------> POST request called:",
-    { isNewChat, chatId },
-    JSON.stringify(messages)
-  );
+  // console.log(
+  //   "3: --------------> POST request called:",
+  //   { isNewChat, chatId, firstChat },
+  //   JSON.stringify(messages)
+  // );
 
-  if (isNewChat) {
+  if (firstChat) {
     await addChat(chatId);
   }
 
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
       // If this is a new chat, send the chat ID to the front-end
-      if (isNewChat) {
+      if (firstChat) {
         writer.write({
           type: "data-new-chat-created",
           data: { chatId },

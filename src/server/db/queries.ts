@@ -92,7 +92,7 @@ export const getChatMessages = async (id?: string) => {
         metadata,
       } as Message)
   );
-  console.log("--------------> messages2", JSON.stringify(messages2));
+  // console.log("--------------> messages2", JSON.stringify(messages2));
   return messages2;
 };
 

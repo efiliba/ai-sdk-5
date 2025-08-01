@@ -8,19 +8,19 @@ import { useAutoResume } from "./use-auto-resume";
 
 interface Props {
   chatId: string;
-  isNewChat: boolean;
   initialMessages: Message[];
 }
 
-export const Chat = ({ chatId, isNewChat, initialMessages }: Props) => {
+export const Chat = ({ chatId, initialMessages }: Props) => {
   const router = useRouter();
+
+  // console.log("2: CHAT RENDER -------------->", { chatId });
 
   const { messages, status, sendMessage, setMessages } = useChat<Message>({
     id: chatId, // Need a unique id for each chat
     transport: new DefaultChatTransport({
       body: {
         chatId,
-        isNewChat,
       },
     }),
     messages: initialMessages,
@@ -32,18 +32,19 @@ export const Chat = ({ chatId, isNewChat, initialMessages }: Props) => {
   });
 
   const handleSendMessage = () => {
+    // console.log("3: SEND MESSAGE TO SERVER -------------->");
     sendMessage({
       text: "Hello",
-      metadata: { test: "Send metadata to server" },
+      metadata: { test: "Send metadata to server on each message" },
     });
   };
 
-  // useAutoResume({
-  //   autoResume: true,
-  //   initialMessages,
-  //   setMessages,
-  //   chatId,
-  // });
+  useAutoResume({
+    autoResume: true,
+    initialMessages,
+    setMessages,
+    chatId,
+  });
 
   // console.log(
   //   "--------------> chat:initialMessages",

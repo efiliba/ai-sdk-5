@@ -10,12 +10,7 @@ export default async function Home({
   searchParams: Promise<{ id?: string }>;
 }) {
   const { id } = await searchParams;
-  // if (!id) {
-  //   console.log("PAGE --------------> id is undefined");
-  // } else {
-  //   console.log("PAGE --------------> id DEFINED");
-  // }
-  const chatId = id ?? crypto.randomUUID();
+
   return (
     <div className="font-sans grid items-center justify-items-center p-8 gap-10">
       <Link
@@ -26,9 +21,8 @@ export default async function Home({
         <PlusIcon className="size-5" />
       </Link>
       <Chat
-        key={id}
-        chatId={chatId}
-        isNewChat={!id}
+        // key={id}
+        chatId={id ?? crypto.randomUUID()}
         initialMessages={await getChatMessages(id)}
       />
     </div>
