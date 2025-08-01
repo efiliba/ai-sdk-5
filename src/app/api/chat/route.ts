@@ -1,4 +1,8 @@
-import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  TextUIPart,
+} from "ai";
 import { after } from "next/server";
 import Redis from "ioredis";
 
@@ -10,6 +14,7 @@ import {
   appendStreamId,
   getChatMessages,
   getStreamIds,
+  updateChatTitle,
 } from "@/server/db/queries";
 
 const streamContext = createResumableStreamContext({
@@ -40,8 +45,8 @@ export async function POST(request: Request) {
     await addChat(chatId);
   }
 
-  const currentMessage = messages.at(-1);
-  await addMessage(chatId, currentMessage!);
+  const currentMessage = messages.at(-1)!;
+  await addMessage(chatId, currentMessage);
 
   // Record this stream ID for this chat to be able to resume it later
   await appendStreamId(chatId);
@@ -71,7 +76,7 @@ export async function POST(request: Request) {
         type: "text-start",
       });
 
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 10; i++) {
         await new Promise((resolve) => setTimeout(resolve, 200));
 
         writer.write({
@@ -85,13 +90,17 @@ export async function POST(request: Request) {
         id: "new-msg-id",
         type: "text-end",
       });
+
+      const title = (currentMessage.parts[0] as TextUIPart).text;
+      await updateChatTitle(chatId, title);
+
+      writer.write({
+        type: "data-title-updated",
+        data: { title },
+        transient: true,
+      });
     },
     onFinish: async (response) => {
-      // Merge the existing messages with the response messages
-      console.log(
-        "--------------> onFinish",
-        JSON.stringify(response.responseMessage)
-      );
       await addMessage(chatId, response.responseMessage);
     },
     onError: (e) => {

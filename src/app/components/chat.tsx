@@ -27,8 +27,13 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
     }),
     messages: initialMessages,
     onData: ({ type, data }) => {
-      if (type === "data-new-chat-created") {
-        router.push(`?id=${data.chatId}`);
+      switch (type) {
+        case "data-new-chat-created":
+          router.push(`?id=${data.chatId}`);
+          break;
+        case "data-title-updated":
+          console.log("------------------> data-title-updated", data.title);
+          break;
       }
     },
   });

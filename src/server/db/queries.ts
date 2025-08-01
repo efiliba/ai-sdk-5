@@ -7,7 +7,7 @@ import type { Message } from "@/types";
 export const addChat = async (id: string) =>
   await db.insert(chats).values({ id, title: "Generating..." });
 
-export const updateChat = async (id: string, title: string) =>
+export const updateChatTitle = async (id: string, title: string) =>
   await db.update(chats).set({ title }).where(eq(chats.id, id));
 
 export const addMessage = async (

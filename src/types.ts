@@ -14,5 +14,8 @@ export type Message = UIMessage<
     usage: {
       totalTokens: number;
     };
+    "title-updated": {
+      title: string;
+    };
   }
 >;
