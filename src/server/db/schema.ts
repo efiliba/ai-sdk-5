@@ -80,8 +80,11 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   chat: one(chats, { fields: [messages.chatId], references: [chats.id] }),
 }));
 
-export type Chat = InferSelectModel<typeof chats>;
-export type NewChat = InferInsertModel<typeof chats>;
+// export type Chat = InferSelectModel<typeof chats>;
+// export type NewChat = InferInsertModel<typeof chats>;
 
-export type Message = InferSelectModel<typeof messages>;
-export type NewMessage = InferInsertModel<typeof messages>;
+// export type Stream = InferSelectModel<typeof streams>;
+// export type NewStream = InferInsertModel<typeof streams>;
+
+// export type Message = InferSelectModel<typeof messages>;
+// export type NewMessage = InferInsertModel<typeof messages>;

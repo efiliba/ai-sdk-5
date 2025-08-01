@@ -8,7 +8,8 @@ import {
   addChat,
   addMessage,
   appendStreamId,
-  upsertChat,
+  getChatMessages,
+  getStreamIds,
 } from "@/server/db/queries";
 
 const streamContext = createResumableStreamContext({
@@ -42,6 +43,9 @@ export async function POST(request: Request) {
   const currentMessage = messages.at(-1);
   await addMessage(chatId, currentMessage!);
 
+  // Record this stream ID for this chat to be able to resume it later
+  await appendStreamId(chatId);
+
   // console.log(
   //   "--------------> POST request called",
   //   JSON.stringify(currentMessage)
@@ -67,7 +71,7 @@ export async function POST(request: Request) {
         type: "text-start",
       });
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 30; i++) {
         await new Promise((resolve) => setTimeout(resolve, 200));
 
         writer.write({
@@ -100,21 +104,31 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  // console.log("------------------> GET request called");
   const { searchParams } = new URL(request.url);
-  const chatId = searchParams.get("chatId");
+  const chatId = searchParams.get("chatId")!;
+
   console.log("------------------> GET request called", chatId);
 
-  // const messages = messageCache.get(chatId!);
-  // console.log(
-  //   "------------------> GET messages",
-  //   JSON.stringify(messages, null, 2)
-  // );
+  const [chatMessages, streamIds] = await Promise.all([
+    getChatMessages(chatId),
+    getStreamIds(chatId),
+  ]);
+  console.log(
+    "------------------>\n",
+    "chatMessages",
+    JSON.stringify(chatMessages),
+    "\nstreamIds",
+    JSON.stringify(streamIds)
+  );
+
+  const firstStreamId = streamIds.at(0)!;
+
+  console.log("----------------> firstStreamId", firstStreamId);
 
   // Try to resume the existing stream using the resumable-stream library
   try {
     const resumedStream = await streamContext.resumableStream(
-      "mostRecentStreamId",
+      firstStreamId,
       () => {
         // Fallback stream if resumption fails
         return new ReadableStream({
@@ -126,8 +140,10 @@ export async function GET(request: Request) {
       }
     );
 
+    console.log("------------------> resumedStream", resumedStream);
+
     if (resumedStream) {
-      console.log("Resumed stream:", "mostRecentStreamId");
+      console.log("--> Resumed stream:", firstStreamId);
       return new Response(resumedStream, {
         headers: {
           "Content-Type": "text/event-stream",
@@ -141,12 +157,33 @@ export async function GET(request: Request) {
   }
 
   // If resumption fails, check if we have a complete message to return
-  // const mostRecentMessage = chat.messages.at(-1);
+  const lastMessage = chatMessages.at(-1);
 
-  // if (!mostRecentMessage || mostRecentMessage.role !== "assistant") {
-  //   return new Response("", { status: 200 });
-  // }
+  if (lastMessage?.role !== "assistant") {
+    return new Response("", { status: 200 });
+  }
 
-  // Return empty response if no resumable stream exists
-  return new Response("", { status: 200 });
+  // Create a simple SSE stream with the last message
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      // Send the message as a data event
+      const messageData = JSON.stringify({
+        type: "message",
+        message: lastMessage,
+      });
+
+      controller.enqueue(encoder.encode(`data: ${messageData}\n\n`));
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }

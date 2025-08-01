@@ -20,8 +20,8 @@ export const addMessage = async (
     .where(eq(messages.chatId, chatId));
 
   return await db.insert(messages).values({
-    chatId,
     id,
+    chatId,
     role,
     parts,
     order,
@@ -83,7 +83,7 @@ export const getChatMessages = async (id?: string) => {
     orderBy: (messages, { asc }) => [asc(messages.order)],
   });
 
-  const messages2 = chatMessages.map(
+  return chatMessages.map(
     ({ id, role, parts, metadata }) =>
       ({
         id,
@@ -92,8 +92,6 @@ export const getChatMessages = async (id?: string) => {
         metadata,
       } as Message)
   );
-  // console.log("--------------> messages2", JSON.stringify(messages2));
-  return messages2;
 };
 
 // export const getChats = async ({ userId }: { userId: string }) =>
@@ -102,37 +100,16 @@ export const getChatMessages = async (id?: string) => {
 //     orderBy: (chats, { desc }) => [desc(chats.updatedAt)],
 //   });
 
-export const appendStreamId = async ({
-  chatId,
-  streamId,
-}: {
-  chatId: string;
-  streamId: string;
-}): Promise<void> => {
+export const appendStreamId = async (chatId: string) =>
   await db.insert(streams).values({
-    id: streamId,
     chatId,
   });
-};
 
-/**
- * Get the IDs of all streams for a given chat.
- */
-// export const getStreamIds = async ({
-//   chatId,
-// }: {
-//   chatId: string;
-// }): Promise<{
-//   streamIds: string[];
-//   mostRecentStreamId: string | undefined;
-// }> => {
-//   const streamResult = await db.query.streams.findMany({
-//     where: eq(streams.chatId, chatId),
-//     orderBy: (streams, { desc }) => [desc(streams.createdAt)],
-//   });
-
-//   return {
-//     streamIds: streamResult.map((stream) => stream.id),
-//     mostRecentStreamId: streamResult[0]?.id,
-//   };
-// };
+// Get all the stream IDs for a given chat
+export const getStreamIds = async (chatId: string) =>
+  (
+    await db.query.streams.findMany({
+      where: eq(streams.chatId, chatId),
+      orderBy: (streams, { desc }) => [desc(streams.createdAt)],
+    })
+  ).map(({ id }) => id);

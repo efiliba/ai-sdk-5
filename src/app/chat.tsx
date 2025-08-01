@@ -5,6 +5,8 @@ import { DefaultChatTransport } from "ai";
 import { useRouter } from "next/navigation";
 import { Message } from "@/types";
 import { useAutoResume } from "./use-auto-resume";
+import { Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 
 interface Props {
   chatId: string;
@@ -31,12 +33,18 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
     },
   });
 
-  const handleSendMessage = () => {
-    // console.log("3: SEND MESSAGE TO SERVER -------------->");
+  const [input, setInput] = useState("Some message");
+
+  const count = useRef(1);
+  const handleSubmitMessage = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     sendMessage({
-      text: "Hello",
+      text: input,
       metadata: { test: "Send metadata to server on each message" },
     });
+
+    setInput(`Some message ${count.current++}`);
   };
 
   useAutoResume({
@@ -52,12 +60,34 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
   // );
   return (
     <div className="font-sans grid items-center justify-items-center p-8 gap-10">
-      <button
-        onClick={handleSendMessage}
-        className="bg-blue-500 text-white p-2 rounded-md"
-      >
-        Send Message
-      </button>
+      <div className="border-t border-gray-700">
+        <form
+          onSubmit={handleSubmitMessage}
+          className="mx-auto max-w-[65ch] p-4"
+        >
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Say something..."
+              autoFocus
+              aria-label="Chat input"
+              className="flex-1 rounded border border-gray-700 bg-gray-800 p-2 text-gray-200 placeholder-gray-400 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={status === "streaming"}
+              className="rounded bg-gray-700 px-4 py-2 text-white hover:bg-gray-600 focus:border-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 disabled:hover:bg-gray-700"
+            >
+              {status === "streaming" ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                "Send"
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
       <div>Status: {status}</div>
       <div>
         {messages.map(({ id, role, parts, metadata }) => (
