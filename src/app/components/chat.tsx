@@ -4,7 +4,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRouter } from "next/navigation";
 import { Message } from "@/types";
-import { useAutoResume } from "./use-auto-resume";
+import { useAutoResume } from "../use-auto-resume";
 import { Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 
@@ -59,8 +59,13 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
   //   JSON.stringify(initialMessages)
   // );
   return (
-    <div className="font-sans grid items-center justify-items-center p-8 gap-10">
-      <div className="border-t border-gray-700">
+    <div className="flex flex-1 flex-col">
+      <div
+        className="mx-auto w-full max-w-[65ch] flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500"
+        role="log"
+        aria-label="Chat messages"
+      >
+        <div>Status: {status}</div>
         <form
           onSubmit={handleSubmitMessage}
           className="mx-auto max-w-[65ch] p-4"
@@ -87,31 +92,31 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
             </button>
           </div>
         </form>
-      </div>
-      <div>Status: {status}</div>
-      <div>
-        {messages.map(({ id, role, parts, metadata }) => (
-          <div key={id} className="border-1 border-gray-300 p-2 m-2">
-            Message:
-            <div>
-              <div>ID: {id}</div>
-              <div>Role: {role}</div>
-              <pre>Metadata: {JSON.stringify(metadata, null, 2)}</pre>
-              {parts.map((part, index) => {
-                switch (part.type) {
-                  case "text":
-                    return (
-                      <div key={index} className="whitespace-pre-wrap">
-                        {part.text}
-                      </div>
-                    );
-                  default:
-                    return null;
-                }
-              })}
+        <div>
+          {messages.map(({ id, role, parts, metadata }) => (
+            <div key={id} className="border-1 border-gray-300 p-2 m-2">
+              Message:
+              <div>
+                <div>ID: {id}</div>
+                <div>Role: {role}</div>
+                <pre>Metadata: {JSON.stringify(metadata, null, 2)}</pre>
+                {parts.map((part, index) => {
+                  switch (part.type) {
+                    case "text":
+                      return (
+                        <div key={index} className="whitespace-pre-wrap">
+                          {part.text}
+                        </div>
+                      );
+                    default:
+                      return null;
+                  }
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className="border-t border-gray-700"></div>
       </div>
     </div>
   );

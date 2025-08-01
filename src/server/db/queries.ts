@@ -29,50 +29,6 @@ export const addMessage = async (
   });
 };
 
-export const upsertChat = async ({
-  chatId,
-  title = "",
-  messages: newMessages,
-}: {
-  chatId: string;
-  title?: string;
-  messages: Message[];
-}) => {
-  // First, check if the chat exists and belongs to the user
-  const existingChat = await db.query.chats.findFirst({
-    where: eq(chats.id, chatId),
-  });
-
-  if (existingChat) {
-    // Delete all existing messages
-    await db.delete(messages).where(eq(messages.chatId, chatId));
-    // Optionally update the title if provided
-    if (title) {
-      await db.update(chats).set({ title }).where(eq(chats.id, chatId));
-    }
-  } else {
-    // Create new chat
-    await db.insert(chats).values({ id: chatId, title });
-  }
-
-  // Insert all messages
-  await db.insert(messages).values(
-    newMessages.map(({ role, parts }, index) => ({
-      id: crypto.randomUUID(),
-      chatId,
-      role,
-      parts,
-      order: index,
-    }))
-  );
-
-  if (title) {
-    await db.update(chats).set({ title }).where(eq(chats.id, chatId));
-  }
-
-  return { id: chatId };
-};
-
 export const getChatMessages = async (id?: string) => {
   if (!id) {
     return [];
@@ -94,11 +50,10 @@ export const getChatMessages = async (id?: string) => {
   );
 };
 
-// export const getChats = async ({ userId }: { userId: string }) =>
-//   await db.query.chats.findMany({
-//     where: eq(chats.userId, userId),
-//     orderBy: (chats, { desc }) => [desc(chats.updatedAt)],
-//   });
+export const getChats = async () =>
+  await db.query.chats.findMany({
+    orderBy: (chats, { desc }) => [desc(chats.updatedAt)],
+  });
 
 export const appendStreamId = async (chatId: string) =>
   await db.insert(streams).values({
