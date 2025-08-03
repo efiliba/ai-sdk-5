@@ -22,14 +22,25 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
   const { messages, status, sendMessage, setMessages } = useChat<Message>({
     id: chatId, // Need a unique id for each chat
     transport: new DefaultChatTransport({
-      body: {
-        chatId,
+      // body: {
+      //   chatId,
+      // },
+      // only send the last message to the server:
+      prepareSendMessagesRequest({ messages, id }) {
+        return {
+          body: {
+            chatId: id,
+            firstChat: messages.length === 1,
+            message: messages[messages.length - 1],
+          },
+        };
       },
     }),
     messages: initialMessages,
     onData: ({ type, data }) => {
       switch (type) {
         case "data-new-chat-created":
+          console.log("New chat created", data.chatId);
           router.push(`?id=${data.chatId}`);
           break;
         case "data-title-updated":

@@ -12,7 +12,6 @@ export default async function Home({
     <div className="flex h-screen bg-gray-950">
       <SideBar currentChatId={id} />
       <Chat
-        // key={id}
         chatId={id ?? crypto.randomUUID()}
         initialMessages={await getChatMessages(id)}
       />

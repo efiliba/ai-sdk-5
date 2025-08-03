@@ -23,42 +23,32 @@ const streamContext = createResumableStreamContext({
   subscriber: new Redis(process.env.REDIS_URL!),
 });
 
-// const messageCache = new Map<string, Message[]>();
-
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const { messages, chatId } = JSON.parse(await request.text()) as {
-    messages: Message[];
+  const { chatId, firstChat, message } = JSON.parse(await request.text()) as {
     chatId: string;
+    firstChat: boolean;
+    message: Message;
   };
-
-  const firstChat = messages.length === 1; // Or check db if chatId exists
-
-  // console.log(
-  //   "3: --------------> POST request called:",
-  //   { isNewChat, chatId, firstChat },
-  //   JSON.stringify(messages)
-  // );
 
   if (firstChat) {
     await addChat(chatId);
   }
 
-  const currentMessage = messages.at(-1)!;
-  await addMessage(chatId, currentMessage);
+  console.log(
+    "3: --------------> POST request called:",
+    // { isNewChat, chatId, firstChat },
+    // id,
+    chatId,
+    firstChat,
+    JSON.stringify(message)
+  );
+
+  await addMessage(chatId, message);
 
   // Record this stream ID for this chat to be able to resume it later
   await appendStreamId(chatId);
-
-  // console.log(
-  //   "--------------> POST request called",
-  //   JSON.stringify(currentMessage)
-  // );
-  // messageCache.set(chatId, messages);
-
-  // // Record this new stream so we can resume later
-  // await appendStreamId({ chatId, streamId: crypto.randomUUID() });
 
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
@@ -91,14 +81,16 @@ export async function POST(request: Request) {
         type: "text-end",
       });
 
-      const title = (currentMessage.parts[0] as TextUIPart).text;
-      await updateChatTitle(chatId, title);
+      if (firstChat) {
+        const title = (message.parts[0] as TextUIPart).text;
+        await updateChatTitle(chatId, title);
 
-      writer.write({
-        type: "data-title-updated",
-        data: { title },
-        transient: true,
-      });
+        writer.write({
+          type: "data-title-updated",
+          data: { title },
+          transient: true,
+        });
+      }
     },
     onFinish: async (response) => {
       await addMessage(chatId, response.responseMessage);
