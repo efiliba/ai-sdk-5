@@ -5,7 +5,9 @@ export const redis = new Redis(process.env.REDIS_URL!);
 const CACHE_EXPIRY_SECONDS = 60 * 60 * 6; // 6 hours
 const CACHE_KEY_SEPARATOR = ":";
 
-export const cacheWithRedis = <TFunc extends (...args: any[]) => Promise<any>>(
+export const cacheWithRedis = <
+  TFunc extends (...args: unknown[]) => Promise<unknown>
+>(
   keyPrefix: string,
   fn: TFunc
 ): TFunc => {

@@ -20,18 +20,22 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
   // console.log("2: CHAT RENDER -------------->", { chatId });
 
   const { messages, status, sendMessage, setMessages } = useChat<Message>({
-    id: chatId, // Need a unique id for each chat
+    id: chatId,
     transport: new DefaultChatTransport({
-      // body: {
-      //   chatId,
-      // },
-      // only send the last message to the server:
-      prepareSendMessagesRequest({ messages, id }) {
+      prepareSendMessagesRequest({ messages }) {
         return {
           body: {
-            chatId: id,
+            chatId,
             firstChat: messages.length === 1,
-            message: messages[messages.length - 1],
+            message: messages.at(-1),
+          },
+        };
+      },
+      prepareReconnectToStreamRequest({ id }) {
+        return {
+          api: `/api/chat?chatId=${id}`,
+          headers: {
+            "Content-Type": "application/json",
           },
         };
       },

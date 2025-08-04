@@ -1,4 +1,4 @@
-import { eq, and, desc, max, count } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 
 import { db } from ".";
 import { chats, messages, streams } from "./schema";
@@ -12,7 +12,7 @@ export const updateChatTitle = async (id: string, title: string) =>
 
 export const addMessage = async (
   chatId: string,
-  { id, role, parts, metadata }: Message
+  { role, parts, metadata }: Omit<Message, "id">
 ) => {
   const [{ count: order }] = await db
     .select({ count: count() })
@@ -20,7 +20,6 @@ export const addMessage = async (
     .where(eq(messages.chatId, chatId));
 
   return await db.insert(messages).values({
-    id,
     chatId,
     role,
     parts,
@@ -55,10 +54,16 @@ export const getChats = async () =>
     orderBy: (chats, { desc }) => [desc(chats.updatedAt)],
   });
 
-export const appendStreamId = async (chatId: string) =>
-  await db.insert(streams).values({
-    chatId,
-  });
+export const appendStreamId = async (chatId: string) => {
+  const [result] = await db
+    .insert(streams)
+    .values({
+      chatId,
+    })
+    .returning({ id: streams.id });
+
+  return result.id;
+};
 
 // Get all the stream IDs for a given chat
 export const getStreamIds = async (chatId: string) =>

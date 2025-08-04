@@ -1,36 +1,122 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Chat Application
+
+This is a Next.js application that demonstrates how to use the AI SDK with streaming chat functionality.
+
+## Features
+
+- Real-time streaming chat
+- Message persistence
+- Auto-resume functionality
+- Custom transport configuration
+
+## How to use `prepareReconnectToStreamRequest`
+
+The `prepareReconnectToStreamRequest` function is part of the `DefaultChatTransport` configuration in the AI SDK. It allows you to customize the request when the AI SDK attempts to reconnect to an existing stream.
+
+### Basic Usage
+
+```typescript
+import { DefaultChatTransport } from "ai";
+import { useChat } from "@ai-sdk/react";
+
+const { messages, sendMessage } = useChat({
+  id: chatId,
+  transport: new DefaultChatTransport({
+    // Configure how to send new messages
+    prepareSendMessagesRequest({ messages }) {
+      return {
+        body: {
+          chatId,
+          firstChat: messages.length === 1,
+          message: messages.at(-1),
+        },
+      };
+    },
+    // Configure how to reconnect to existing streams
+    prepareReconnectToStreamRequest({ id }) {
+      return {
+        api: `/api/chat?chatId=${id}`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      };
+    },
+  }),
+});
+```
+
+### Function Parameters
+
+The `prepareReconnectToStreamRequest` function receives an object with the following properties:
+
+- `id`: The chat ID (string)
+- `requestMetadata`: Custom metadata passed to the request
+- `body`: The request body object
+- `credentials`: Request credentials
+- `headers`: HTTP headers
+- `api`: The API endpoint
+
+### Return Value
+
+The function should return an object with:
+
+- `headers?`: Optional HTTP headers to include in the reconnection request
+- `credentials?`: Optional request credentials
+- `api?`: Optional custom API endpoint
+
+### Example with Custom Headers
+
+```typescript
+prepareReconnectToStreamRequest({ id, headers }) {
+  return {
+    api: `/api/chat?chatId=${id}`,
+    headers: {
+      ...headers,
+      'X-Custom-Header': 'reconnect',
+      'Authorization': `Bearer ${getAuthToken()}`,
+    },
+  };
+}
+```
+
+### Example with Different API Endpoint
+
+```typescript
+prepareReconnectToStreamRequest({ id }) {
+  return {
+    api: `/api/chat/resume?chatId=${id}&timestamp=${Date.now()}`,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+}
+```
+
+## API Routes
+
+The application includes API routes that handle both POST (new messages) and GET (reconnection) requests:
+
+- `POST /api/chat`: Handles new message submissions
+- `GET /api/chat?chatId=...`: Handles reconnection requests
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+   ```bash
+   pnpm install
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Set up environment variables:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+   ```bash
+   cp .env.example .env.local
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Run the development server:
 
-## Learn More
+   ```bash
+   pnpm dev
+   ```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
