@@ -7,7 +7,7 @@ import { after } from "next/server";
 import Redis from "ioredis";
 
 import { Message } from "@/types";
-import { createResumableStreamContext } from "resumable-stream/redis";
+import { createResumableStreamContext } from "resumable-stream/ioredis";
 import {
   addChat,
   addMessage,
@@ -36,19 +36,20 @@ export async function POST(request: Request) {
     await addChat(chatId);
   }
 
-  console.log(
-    "3: --------------> POST request called:",
-    // { isNewChat, chatId, firstChat },
-    // id,
-    chatId,
-    firstChat,
-    JSON.stringify(message)
-  );
+  // console.log(
+  //   "3: --------------> POST request called:",
+  //   // { isNewChat, chatId, firstChat },
+  //   // id,
+  //   chatId,
+  //   firstChat,
+  //   JSON.stringify(message)
+  // );
 
   await addMessage(chatId, message);
 
   // Record this stream ID for this chat to be able to resume it later
-  await appendStreamId(chatId);
+  const streamId = await appendStreamId(chatId);
+  console.log("4: ------------------> streamId saved in db", streamId);
 
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
         type: "text-start",
       });
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 20; i++) {
         await new Promise((resolve) => setTimeout(resolve, 200));
 
         writer.write({
@@ -91,9 +92,12 @@ export async function POST(request: Request) {
           transient: true,
         });
       }
+
+      // Consume the stream to be able to resume it later
+      // await streamContext.consumeStream();
     },
-    onFinish: async (response) => {
-      await addMessage(chatId, response.responseMessage);
+    onFinish: async ({ responseMessage }) => {
+      await addMessage(chatId, responseMessage);
     },
     onError: (e) => {
       console.error(e);
@@ -102,20 +106,46 @@ export async function POST(request: Request) {
   });
 
   return createUIMessageStreamResponse({ stream });
+
+  // Convert the UI stream to a string-based SSE stream for resumable-stream
+  const sseStream = new ReadableStream<string>({
+    async start(controller) {
+      const reader = stream.getReader();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Convert the UI message chunk to SSE format
+          const sseData = `data: ${JSON.stringify(value)}\n\n`;
+          controller.enqueue(sseData);
+        }
+        controller.enqueue("data: [DONE]\n\n");
+      } catch (error) {
+        console.error("Error in SSE stream:", error);
+        controller.enqueue(
+          `data: ${JSON.stringify({ error: "Stream error" })}\n\n`
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const chatId = searchParams.get("chatId")!;
+  const chatId = searchParams.get("id")!;
 
-  console.log("------------------> GET request called", chatId);
+  console.log("9: ******* ------------------> GET request called", chatId);
 
   const [chatMessages, streamIds] = await Promise.all([
     getChatMessages(chatId),
     getStreamIds(chatId),
   ]);
   console.log(
-    "------------------>\n",
+    "9: ------------------>\n",
     "chatMessages",
     JSON.stringify(chatMessages),
     "\nstreamIds",
@@ -124,13 +154,16 @@ export async function GET(request: Request) {
 
   const firstStreamId = streamIds.at(0)!;
 
-  console.log("----------------> firstStreamId", firstStreamId);
+  console.log("9: ----------------> firstStreamId", firstStreamId);
 
   // Try to resume the existing stream using the resumable-stream library
   try {
     const resumedStream = await streamContext.resumableStream(
       firstStreamId,
       () => {
+        console.log(
+          "9: ------------------> Fallback stream if resumption fails USED"
+        );
         // Fallback stream if resumption fails
         return new ReadableStream({
           start(controller) {
@@ -141,10 +174,10 @@ export async function GET(request: Request) {
       }
     );
 
-    console.log("------------------> resumedStream", resumedStream);
+    console.log("9: ------------------> resumedStream", resumedStream);
 
     if (resumedStream) {
-      console.log("--> Resumed stream:", firstStreamId);
+      console.log("9: SUCCESS --> Resumed stream:", firstStreamId);
       return new Response(resumedStream, {
         headers: {
           "Content-Type": "text/event-stream",
@@ -160,7 +193,7 @@ export async function GET(request: Request) {
   // If resumption fails, check if we have a complete message to return
   const lastMessage = chatMessages.at(-1);
 
-  if (lastMessage?.role !== "assistant") {
+  if (!lastMessage || lastMessage.role !== "assistant") {
     return new Response("", { status: 200 });
   }
 

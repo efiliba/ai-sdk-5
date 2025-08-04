@@ -7,7 +7,6 @@ import { useChat } from "@ai-sdk/react";
 import { Loader2 } from "lucide-react";
 
 import { Message } from "@/types";
-import { useAutoResume } from "../use-auto-resume";
 
 interface Props {
   chatId: string;
@@ -19,8 +18,9 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
 
   // console.log("2: CHAT RENDER -------------->", { chatId });
 
-  const { messages, status, sendMessage, setMessages } = useChat<Message>({
+  const { messages, status, sendMessage } = useChat<Message>({
     id: chatId,
+    resume: true,
     transport: new DefaultChatTransport({
       prepareSendMessagesRequest({ messages }) {
         return {
@@ -32,8 +32,9 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
         };
       },
       prepareReconnectToStreamRequest({ id }) {
+        console.log("** Reconnect to stream **", id);
         return {
-          api: `/api/chat?chatId=${id}`,
+          api: `/api/chat?id=${chatId}`,
           headers: {
             "Content-Type": "application/json",
           },
@@ -68,12 +69,12 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
     setInput("");
   };
 
-  useAutoResume({
-    autoResume: true,
-    initialMessages,
-    setMessages,
-    chatId,
-  });
+  // useAutoResume({
+  //   autoResume: true,
+  //   initialMessages,
+  //   setMessages,
+  //   chatId,
+  // });
 
   // console.log(
   //   "--------------> chat:initialMessages",
