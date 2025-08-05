@@ -27,7 +27,7 @@ const { messages, sendMessage } = useChat({
       return {
         body: {
           chatId,
-          firstChat: messages.length === 1,
+          newChat: messages.length === 1,
           message: messages.at(-1),
         },
       };
