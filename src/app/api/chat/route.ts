@@ -2,10 +2,12 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   TextUIPart,
+  consumeStream,
 } from "ai";
 import { after } from "next/server";
 import Redis from "ioredis";
 
+import { generateStream } from "@/app/utils";
 import { Message } from "@/types";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 import {
@@ -36,15 +38,6 @@ export async function POST(request: Request) {
     await addChat(chatId);
   }
 
-  // console.log(
-  //   "3: --------------> POST request called:",
-  //   // { isNewChat, chatId, firstChat },
-  //   // id,
-  //   chatId,
-  //   firstChat,
-  //   JSON.stringify(message)
-  // );
-
   await addMessage(chatId, message);
 
   // Record this stream ID for this chat to be able to resume it later
@@ -62,25 +55,7 @@ export async function POST(request: Request) {
         });
       }
 
-      writer.write({
-        id: "new-msg-id",
-        type: "text-start",
-      });
-
-      for (let i = 0; i < 20; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-
-        writer.write({
-          id: "new-msg-id",
-          type: "text-delta",
-          delta: `${i}${(i + 1) % 10 === 0 ? "  \n" : " "}`,
-        });
-      }
-
-      writer.write({
-        id: "new-msg-id",
-        type: "text-end",
-      });
+      await generateStream(writer);
 
       if (firstChat) {
         const title = (message.parts[0] as TextUIPart).text;
@@ -92,9 +67,6 @@ export async function POST(request: Request) {
           transient: true,
         });
       }
-
-      // Consume the stream to be able to resume it later
-      // await streamContext.consumeStream();
     },
     onFinish: async ({ responseMessage }) => {
       await addMessage(chatId, responseMessage);
@@ -105,36 +77,15 @@ export async function POST(request: Request) {
     },
   });
 
-  return createUIMessageStreamResponse({ stream });
-
-  // Convert the UI stream to a string-based SSE stream for resumable-stream
-  const sseStream = new ReadableStream<string>({
-    async start(controller) {
-      const reader = stream.getReader();
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          // Convert the UI message chunk to SSE format
-          const sseData = `data: ${JSON.stringify(value)}\n\n`;
-          controller.enqueue(sseData);
-        }
-        controller.enqueue("data: [DONE]\n\n");
-      } catch (error) {
-        console.error("Error in SSE stream:", error);
-        controller.enqueue(
-          `data: ${JSON.stringify({ error: "Stream error" })}\n\n`
-        );
-      } finally {
-        controller.close();
-      }
-    },
+  return createUIMessageStreamResponse({
+    stream,
+    consumeSseStream: consumeStream,
   });
 }
 
 export async function GET(request: Request) {
+  // https://ai-sdk.dev/docs/advanced/caching
+
   const { searchParams } = new URL(request.url);
   const chatId = searchParams.get("id")!;
 
