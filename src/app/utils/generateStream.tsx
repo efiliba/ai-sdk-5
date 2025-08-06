@@ -2,26 +2,38 @@ import { UIMessageStreamWriter } from "ai";
 
 import { Message } from "@/types";
 
+const words = [
+  "Hello ",
+  "world! ",
+  "This ",
+  "is a ",
+  "test ",
+  "of ",
+  "streaming ",
+  "text\n",
+  "without ",
+  "using ",
+  "an ",
+  "LLM ",
+  "model. ",
+  "Just ",
+  "simple ",
+  "text ",
+  "generation.",
+];
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function* integers() {
-  let i = 0;
-  while (true) {
+async function* generateText() {
+  for (let i = 0; i < words.length; i++) {
     await sleep(50);
-    yield i++;
+    yield words[i];
   }
 }
 
 // Wraps a generator into a ReadableStream
-const createStream = (iterator: AsyncGenerator<number>) =>
+const createStream = (iterator: AsyncGenerator<string>) =>
   new ReadableStream({
-    // async start(controller) {
-    //   for await (const v of iterator) { // Eager for-loop - runs as fast as possible and no way to stop producing
-    //     controller.enqueue(v);
-    //   }
-    //   controller.close();
-    // },
-
     // Controls the speed of the stream, even if the generator produces values faster (Back-pressure)
     async pull(controller) {
       const { value, done } = await iterator.next();
@@ -35,29 +47,36 @@ const createStream = (iterator: AsyncGenerator<number>) =>
   });
 
 export const generateStream = async (
-  writer: UIMessageStreamWriter<Message>
+  writer: UIMessageStreamWriter<Message>,
+  onDelta?: (delta: string) => void
 ) => {
   writer.write({
     id: "new-msg-id",
     type: "text-start",
   });
 
-  const stream = createStream(integers());
+  const stream = createStream(generateText());
   const reader = stream.getReader();
 
-  for (let i = 0; i < 20; i++) {
-    await sleep(200);
-    const { value, done } = await reader.read();
+  let done = false;
+  while (!done) {
+    const { value, done: isDone } = await reader.read();
+    done = isDone;
 
-    if (done) {
-      break;
+    if (!done) {
+      writer.write({
+        id: "new-msg-id",
+        type: "text-delta",
+        delta: value,
+      });
+      
+      // Call the callback if provided
+      if (onDelta) {
+        onDelta(value);
+      }
     }
 
-    writer.write({
-      id: "new-msg-id",
-      type: "text-delta",
-      delta: `${value}${(value + 1) % 10 === 0 ? "  \n" : " "}`,
-    });
+    await sleep(200);
   }
 
   writer.write({
