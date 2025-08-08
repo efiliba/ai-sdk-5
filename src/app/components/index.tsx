@@ -1,3 +1,2 @@
-export { Chat } from "./chat";
-export { SideBar } from "./side-bar";
+export { ChatWindow } from "./chat-window";
 export { ClearRedisButton } from "./clear-redis-button";

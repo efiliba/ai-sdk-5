@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { DefaultChatTransport } from "ai";
 import { useChat } from "@ai-sdk/react";
@@ -9,11 +9,12 @@ import { Loader2 } from "lucide-react";
 import { Message } from "@/types";
 
 interface Props {
+  inputRef: RefObject<HTMLInputElement | null>;
   chatId: string;
   initialMessages: Message[];
 }
 
-export const Chat = ({ chatId, initialMessages }: Props) => {
+export const ChatWindow = ({ inputRef, chatId, initialMessages }: Props) => {
   const router = useRouter();
 
   // console.log("2: CHAT RENDER -------------->", { chatId });
@@ -92,6 +93,7 @@ export const Chat = ({ chatId, initialMessages }: Props) => {
         className="mx-auto max-w-[65ch] p-4 grid grid-cols-[1fr_min-content] gap-x-2"
       >
         <input
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="How can I help you?"

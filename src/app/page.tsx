@@ -1,5 +1,5 @@
-import { Chat, SideBar } from "./components";
-import { getChatMessages } from "@/server/db/queries";
+import { Chats } from "@/app/components/chats";
+import { getChatMessages, getChats } from "@/server/db/queries";
 
 export default async function Home({
   searchParams,
@@ -9,12 +9,10 @@ export default async function Home({
   const { id } = await searchParams;
 
   return (
-    <div className="grid grid-cols-[250px_1fr] h-screen bg-gray-950">
-      <SideBar currentChatId={id} />
-      <Chat
-        chatId={id ?? crypto.randomUUID()}
-        initialMessages={await getChatMessages(id)}
-      />
-    </div>
+    <Chats
+      chatId={id}
+      chats={await getChats()}
+      initialMessages={await getChatMessages(id)}
+    />
   );
 }

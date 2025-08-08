@@ -4,10 +4,16 @@ import { Trash2Icon } from "lucide-react";
 import { clearAllChatsAction } from "@/app/actions";
 import { cn } from "@/app/utils";
 
-export const ClearChatsButton = ({ className }: { className?: string }) => {
+export const ClearChatsButton = ({
+  className,
+  onClearChats,
+}: {
+  className?: string;
+  onClearChats: () => void;
+}) => {
   const handleClear = async () => {
     await clearAllChatsAction();
-    window.location.reload();
+    onClearChats();
   };
 
   return (
