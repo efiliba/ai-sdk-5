@@ -25,7 +25,7 @@ export default async function RedisPage() {
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="grid grid-cols-[1fr_max-content] gap-x-2 mb-4">
         <h1 className="text-2xl font-bold">Redis Data</h1>
         <ClearRedisButton />
       </div>

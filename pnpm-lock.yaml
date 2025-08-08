@@ -17,6 +17,9 @@ importers:
       ai:
         specifier: ^5.0.0
         version: 5.0.0(zod@4.0.14)
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       drizzle-orm:
         specifier: ^0.44.4
         version: 0.44.4(@opentelemetry/api@1.9.0)(postgres@3.4.7)
@@ -44,6 +47,9 @@ importers:
       resumable-stream:
         specifier: ^2.2.3
         version: 2.2.3
+      tailwind-merge:
+        specifier: ^3.3.1
+        version: 3.3.1
       zod:
         specifier: ^4.0.14
         version: 4.0.14
@@ -1137,6 +1143,10 @@ packages:
 
   client-only@0.0.1:
     resolution: {integrity: sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==}
+
+  clsx@2.1.1:
+    resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
+    engines: {node: '>=6'}
 
   cluster-key-slot@1.1.2:
     resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
@@ -2285,6 +2295,9 @@ packages:
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  tailwind-merge@3.3.1:
+    resolution: {integrity: sha512-gBXpgUm/3rp1lMZZrM/w7D8GKqshif0zAymAhbCyIt8KMe+0v9DQ7cdYLR4FHH/cKpdTXb+A/tKKU3eolfsI+g==}
+
   tailwindcss@4.1.11:
     resolution: {integrity: sha512-2E9TBm6MDD/xKYe+dvJZAmg3yxIEDNRc0jwlNyDg/4Fil2QcSLjFKGVff0lAf1jjeaArlG/M75Ey/EYr/OJtBA==}
 
@@ -3266,6 +3279,8 @@ snapshots:
   chownr@3.0.0: {}
 
   client-only@0.0.1: {}
+
+  clsx@2.1.1: {}
 
   cluster-key-slot@1.1.2: {}
 
@@ -4583,6 +4598,8 @@ snapshots:
       dequal: 2.0.3
       react: 19.1.0
       use-sync-external-store: 1.5.0(react@19.1.0)
+
+  tailwind-merge@3.3.1: {}
 
   tailwindcss@4.1.11: {}
 

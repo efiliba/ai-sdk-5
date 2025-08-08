@@ -9,7 +9,7 @@ export default async function Home({
   const { id } = await searchParams;
 
   return (
-    <div className="flex h-screen bg-gray-950">
+    <div className="grid grid-cols-[250px_1fr] h-screen bg-gray-950">
       <SideBar currentChatId={id} />
       <Chat
         chatId={id ?? crypto.randomUUID()}
