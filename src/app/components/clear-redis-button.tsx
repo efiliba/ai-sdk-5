@@ -1,6 +1,6 @@
 "use client";
 
-import { clearRedis } from "./actions";
+import { clearRedis } from "@/app/actions";
 
 export const ClearRedisButton = () => {
   const handleClear = async () => {

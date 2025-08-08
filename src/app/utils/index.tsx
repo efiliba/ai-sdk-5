@@ -1,1 +1,1 @@
-export * from "./generateStream";
+export * from "./streamMockText";

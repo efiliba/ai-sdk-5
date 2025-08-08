@@ -1,6 +1,7 @@
 "use server";
 
 import Redis from "ioredis";
+import { clearAllChats } from "@/server/db/queries";
 
 const redis = new Redis(process.env.REDIS_URL!);
 
@@ -25,4 +26,8 @@ export async function clearRedis() {
       error: "Failed to clear Redis data",
     };
   }
+}
+
+export async function clearAllChatsAction() {
+  return await clearAllChats();
 }

@@ -2,6 +2,7 @@ import { PlusIcon } from "lucide-react";
 import Link from "next/link";
 
 import { getChats } from "@/server/db/queries";
+import { ClearChatsButton } from "./clear-chats-button";
 
 export const SideBar = async ({
   currentChatId,
@@ -14,14 +15,17 @@ export const SideBar = async ({
     <div className="flex w-64 flex-col border-r border-gray-700 bg-gray-900">
       <div className="p-4">
         <div className="flex items-center justify-between">
+          <ClearChatsButton />
           <h2 className="text-sm font-semibold text-gray-400">Your Chats</h2>
-          <Link
-            href="/"
-            className="flex size-8 items-center justify-center rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            title="New Chat"
-          >
-            <PlusIcon className="size-5" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="flex size-8 items-center justify-center rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              title="New Chat"
+            >
+              <PlusIcon className="size-5" />
+            </Link>
+          </div>
         </div>
       </div>
       <div className="-mt-1 flex-1 space-y-2 overflow-y-auto px-4 pt-1 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600">

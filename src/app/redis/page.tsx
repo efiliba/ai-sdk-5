@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 
-import { ClearRedisButton } from "./clear-redis-button";
+import { ClearRedisButton } from "@/app/components";
 
 const redis = new Redis(process.env.REDIS_URL!);
 

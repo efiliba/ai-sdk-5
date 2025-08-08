@@ -73,3 +73,9 @@ export const getStreamIds = async (chatId: string) =>
       orderBy: (streams, { desc }) => [desc(streams.createdAt)],
     })
   ).map(({ id }) => id);
+
+export const clearAllChats = async () => {
+  await db.delete(messages);
+  await db.delete(streams);
+  await db.delete(chats);
+};

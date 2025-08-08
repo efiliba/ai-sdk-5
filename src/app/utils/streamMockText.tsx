@@ -1,7 +1,3 @@
-import { UIMessageStreamWriter } from "ai";
-
-import { Message } from "@/types";
-
 const words = [
   "Hello ",
   "world! ",
@@ -24,7 +20,7 @@ const words = [
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function* generateText() {
+async function* textGenerator() {
   for (let i = 0; i < words.length; i++) {
     await sleep(50);
     yield words[i];
@@ -46,41 +42,23 @@ const createStream = (iterator: AsyncGenerator<string>) =>
     },
   });
 
-export const generateStream = async (
-  writer: UIMessageStreamWriter<Message>,
-  onDelta?: (delta: string) => void
+export const streamMockText = async (
+  onDelta: (delta: string, accumulatedText: string) => void
 ) => {
-  writer.write({
-    id: "new-msg-id",
-    type: "text-start",
-  });
-
-  const stream = createStream(generateText());
+  const stream = createStream(textGenerator());
   const reader = stream.getReader();
 
   let done = false;
+  let accumulatedText = "";
   while (!done) {
     const { value, done: isDone } = await reader.read();
     done = isDone;
 
     if (!done) {
-      writer.write({
-        id: "new-msg-id",
-        type: "text-delta",
-        delta: value,
-      });
-      
-      // Call the callback if provided
-      if (onDelta) {
-        onDelta(value);
-      }
+      accumulatedText += value;
+      onDelta(value, accumulatedText);
     }
 
-    await sleep(200);
+    await sleep(1000);
   }
-
-  writer.write({
-    id: "new-msg-id",
-    type: "text-end",
-  });
 };

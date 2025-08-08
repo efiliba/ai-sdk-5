@@ -7,7 +7,7 @@ import {
 import { after } from "next/server";
 import Redis from "ioredis";
 
-import { generateStream } from "@/app/utils";
+import { streamMockText } from "@/app/utils";
 import { Message } from "@/types";
 import {
   addChat,
@@ -35,9 +35,8 @@ export async function POST(request: Request) {
 
   await addMessage(chatId, message);
 
-  // Record this stream ID for this chat to be able to resume it later
+  // Record stream ID to be able to resume this chat
   const streamId = await appendStreamId(chatId);
-  console.log("4: ------------------> streamId saved in db", streamId);
 
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
@@ -50,19 +49,24 @@ export async function POST(request: Request) {
         });
       }
 
-      // Store partial data in Redis as it's generated
-      let accumulatedText = "";
-      let deltaCount = 0;
+      writer.write({
+        id: "mock-text",
+        type: "text-start",
+      });
 
-      await generateStream(writer, (delta) => {
-        accumulatedText += delta;
-        deltaCount++;
-        // Store partial data in Redis with the stream ID
+      await streamMockText((delta, accumulatedText) => {
+        writer.write({
+          id: "mock-text",
+          type: "text-delta",
+          delta,
+        });
+
         redis.setex(`stream:${streamId}:partial`, 3600, accumulatedText);
-        console.log(
-          `Stream ${streamId}: Stored partial data (${deltaCount} deltas):`,
-          accumulatedText
-        );
+      });
+
+      writer.write({
+        id: "mock-text",
+        type: "text-end",
       });
 
       if (newChat) {
@@ -78,9 +82,7 @@ export async function POST(request: Request) {
     },
     onFinish: ({ responseMessage }) => {
       addMessage(chatId, responseMessage);
-      // Clear the partial data from Redis when stream is complete
       redis.del(`stream:${streamId}:partial`);
-      console.log(`Stream ${streamId}: Completed and cleared partial data`);
     },
     onError: (e) => {
       console.error(e);
@@ -98,19 +100,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const chatId = searchParams.get("id")!;
 
-  console.log("9: ******* ------------------> GET request called", chatId);
-
   const [chatMessages, streamIds] = await Promise.all([
     getChatMessages(chatId),
     getStreamIds(chatId),
   ]);
-  console.log(
-    "9: ------------------>\n",
-    "chatMessages",
-    JSON.stringify(chatMessages),
-    "\nstreamIds",
-    JSON.stringify(streamIds)
-  );
 
   // Use the most recent stream ID (first in the array since they're ordered by desc)
   const mostRecentStreamId = streamIds.at(0)!;
@@ -132,14 +125,14 @@ export async function GET(request: Request) {
       async start(controller) {
         // Send the text-start event
         const startData = JSON.stringify({
-          id: "new-msg-id",
+          id: "mock-text",
           type: "text-start",
         });
         controller.enqueue(encoder.encode(`data: ${startData}\n\n`));
 
         // Send the existing partial data as a single text-delta event
         const deltaData = JSON.stringify({
-          id: "new-msg-id",
+          id: "mock-text",
           type: "text-delta",
           delta: partialData,
         });
@@ -162,7 +155,7 @@ export async function GET(request: Request) {
               // Send only the new part
               const newDelta = updatedPartialData.slice(lastSentLength);
               const newDeltaData = JSON.stringify({
-                id: "new-msg-id",
+                id: "mock-text",
                 type: "text-delta",
                 delta: newDelta,
               });
@@ -177,7 +170,7 @@ export async function GET(request: Request) {
             if (isComplete) {
               // Send the text-end event
               const endData = JSON.stringify({
-                id: "new-msg-id",
+                id: "mock-text",
                 type: "text-end",
               });
               controller.enqueue(encoder.encode(`data: ${endData}\n\n`));
