@@ -53,6 +53,10 @@ export const ChatWindow = ({ inputRef, chatId, initialMessages }: Props) => {
           console.log("Title updated", data.title);
           router.refresh(); // Refresh the sidebar to show the new title
           break;
+        case "data-append-message":
+          console.log("**** Append message called ****", data.message);
+          // setMessages((prev) => [...prev, data.message]);
+          break;
       }
     },
   });
@@ -64,23 +68,12 @@ export const ChatWindow = ({ inputRef, chatId, initialMessages }: Props) => {
 
     sendMessage({
       text: input,
-      metadata: { test: "Send metadata to server on each message" },
+      metadata: { data: "Send metadata to server on each message" },
     });
 
     setInput("");
   };
 
-  // useAutoResume({
-  //   autoResume: true,
-  //   initialMessages,
-  //   setMessages,
-  //   chatId,
-  // });
-
-  // console.log(
-  //   "--------------> chat:initialMessages",
-  //   JSON.stringify(initialMessages)
-  // );
   return (
     <div
       className="mx-auto w-full max-w-[65ch] overflow-y-auto p-4 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500"

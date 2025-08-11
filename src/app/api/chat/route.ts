@@ -3,7 +3,9 @@ import {
   createUIMessageStreamResponse,
   TextUIPart,
   consumeStream,
+  // createDataStream,
 } from "ai";
+import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { after } from "next/server";
 import Redis from "ioredis";
 
@@ -19,6 +21,12 @@ import {
 } from "@/server/db/queries";
 
 const redis = new Redis(process.env.REDIS_URL!);
+
+const streamContext = createResumableStreamContext({
+  waitUntil: after,
+  publisher: new Redis(process.env.REDIS_URL!),
+  subscriber: new Redis(process.env.REDIS_URL!),
+});
 
 export const maxDuration = 60;
 
@@ -61,7 +69,7 @@ export async function POST(request: Request) {
           delta,
         });
 
-        redis.setex(`stream:${streamId}:partial`, 3600, accumulatedText);
+        // redis.setex(`stream:${streamId}:partial`, 3600, accumulatedText);
       });
 
       writer.write({
@@ -81,8 +89,9 @@ export async function POST(request: Request) {
       }
     },
     onFinish: ({ responseMessage }) => {
+      console.log("9: ----------------> delete streamId:", streamId);
       addMessage(chatId, responseMessage);
-      redis.del(`stream:${streamId}:partial`);
+      redis.del(`resumable-stream:rs:sentinel:${streamId}`);
     },
     onError: (e) => {
       console.error(e);
@@ -90,10 +99,39 @@ export async function POST(request: Request) {
     },
   });
 
-  return createUIMessageStreamResponse({
-    stream,
-    consumeSseStream: consumeStream,
-  });
+  const stream2 = () =>
+    createUIMessageStreamResponse({
+      stream,
+      consumeSseStream: consumeStream,
+    });
+
+  return new Response(
+    await streamContext.resumableStream(streamId, () => {
+      const response = createUIMessageStreamResponse({
+        stream,
+        consumeSseStream: consumeStream,
+      });
+      return new ReadableStream<string>({
+        start(controller) {
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+
+          function pump(): Promise<void> {
+            return reader.read().then(({ done, value }) => {
+              if (done) {
+                controller.close();
+                return;
+              }
+              controller.enqueue(decoder.decode(value, { stream: true }));
+              return pump();
+            });
+          }
+
+          return pump();
+        },
+      });
+    })
+  );
 }
 
 export async function GET(request: Request) {
@@ -110,89 +148,21 @@ export async function GET(request: Request) {
 
   console.log("9: ----------------> mostRecentStreamId", mostRecentStreamId);
 
-  // Check if we have partial data in Redis for this stream
-  const partialData = await redis.get(`stream:${mostRecentStreamId}:partial`);
+  // Creates a readable stream if ongoing
+  const stream = await streamContext.resumableStream(
+    mostRecentStreamId,
+    () =>
+      new ReadableStream<string>({
+        start() {
+          // Empty stream for resumable context
+        },
+      })
+  );
 
-  if (partialData) {
-    console.log(
-      "9: ------------------> Found partial data in Redis:",
-      partialData
-    );
+  console.log("9: ----------------> stream FOUND", stream);
 
-    // Create a stream that continues from where it left off
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        // Send the text-start event
-        const startData = JSON.stringify({
-          id: "mock-text",
-          type: "text-start",
-        });
-        controller.enqueue(encoder.encode(`data: ${startData}\n\n`));
-
-        // Send the existing partial data as a single text-delta event
-        const deltaData = JSON.stringify({
-          id: "mock-text",
-          type: "text-delta",
-          delta: partialData,
-        });
-        controller.enqueue(encoder.encode(`data: ${deltaData}\n\n`));
-
-        // Now continue generating the rest of the stream
-        let lastSentLength = partialData.length;
-
-        // Poll for new data every 100ms
-        const pollInterval = setInterval(async () => {
-          try {
-            const updatedPartialData = await redis.get(
-              `stream:${mostRecentStreamId}:partial`
-            );
-
-            if (
-              updatedPartialData &&
-              updatedPartialData.length > lastSentLength
-            ) {
-              // Send only the new part
-              const newDelta = updatedPartialData.slice(lastSentLength);
-              const newDeltaData = JSON.stringify({
-                id: "mock-text",
-                type: "text-delta",
-                delta: newDelta,
-              });
-              controller.enqueue(encoder.encode(`data: ${newDeltaData}\n\n`));
-              lastSentLength = updatedPartialData.length;
-            }
-
-            // Check if the stream is complete (partial data was cleared)
-            const isComplete = !(await redis.get(
-              `stream:${mostRecentStreamId}:partial`
-            ));
-            if (isComplete) {
-              // Send the text-end event
-              const endData = JSON.stringify({
-                id: "mock-text",
-                type: "text-end",
-              });
-              controller.enqueue(encoder.encode(`data: ${endData}\n\n`));
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              controller.close();
-              clearInterval(pollInterval);
-            }
-          } catch (error) {
-            console.error("Error polling for stream updates:", error);
-            clearInterval(pollInterval);
-            controller.close();
-          }
-        }, 100);
-
-        // Set a timeout to stop polling after 5 minutes
-        setTimeout(() => {
-          clearInterval(pollInterval);
-          controller.close();
-        }, 5 * 60 * 1000);
-      },
-    });
-
+  // Return stream in a new response if ongoing
+  if (stream) {
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
@@ -200,41 +170,22 @@ export async function GET(request: Request) {
         Connection: "keep-alive",
       },
     });
-  } else {
-    console.log(
-      "9: ------------------> No partial data found in Redis for stream:",
-      mostRecentStreamId
-    );
   }
 
-  // If no partial data, check if we have a complete message to return
-  const lastMessage = chatMessages.at(-1);
+  console.log("9: ----------------> FIND THE MOST RESENT MESSAGE", stream);
 
-  if (!lastMessage || lastMessage.role !== "assistant") {
-    return new Response("", { status: 200 });
-  }
-
-  // Create a simple SSE stream with the last message
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    start(controller) {
-      // Send the message as a data event
-      const messageData = JSON.stringify({
-        type: "message",
-        message: lastMessage,
+  // Else find the most recent message
+  const streamWithMessage = createUIMessageStream({
+    execute: ({ writer }) => {
+      writer.write({
+        type: "data-append-message",
+        data: "test", //{ chatId, message: chatMessages.at(-1) },
       });
-
-      controller.enqueue(encoder.encode(`data: ${messageData}\n\n`));
-      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-      controller.close();
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
+  return createUIMessageStreamResponse({
+    stream: streamWithMessage,
+    consumeSseStream: consumeStream,
   });
 }

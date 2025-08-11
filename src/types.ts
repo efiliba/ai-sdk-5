@@ -1,7 +1,7 @@
 import { UIMessage } from "ai";
 
 export type Message = UIMessage<
-  { test: string },
+  { data: string },
   {
     "new-chat-created": {
       chatId: string;
@@ -16,6 +16,9 @@ export type Message = UIMessage<
     };
     "title-updated": {
       title: string;
+    };
+    "append-message": {
+      message: string;
     };
   }
 >;
