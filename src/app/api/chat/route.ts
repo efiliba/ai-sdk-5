@@ -1,16 +1,16 @@
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
-  TextUIPart,
   consumeStream,
+  type TextUIPart,
   // createDataStream,
 } from "ai";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { after } from "next/server";
 import Redis from "ioredis";
 
-import { streamMockText } from "@/app/utils";
-import { Message } from "@/types";
+import { convertToReadableStringStream, streamMockText } from "@/app/utils";
+import type { Message } from "@/types";
 import {
   addChat,
   addMessage,
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
 
   // Record stream ID to be able to resume this chat
   const streamId = await appendStreamId(chatId);
+  console.log("8: ----------------> create streamId:", streamId);
 
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
@@ -57,25 +58,7 @@ export async function POST(request: Request) {
         });
       }
 
-      writer.write({
-        id: "mock-text",
-        type: "text-start",
-      });
-
-      await streamMockText((delta, accumulatedText) => {
-        writer.write({
-          id: "mock-text",
-          type: "text-delta",
-          delta,
-        });
-
-        // redis.setex(`stream:${streamId}:partial`, 3600, accumulatedText);
-      });
-
-      writer.write({
-        id: "mock-text",
-        type: "text-end",
-      });
+      await streamMockText(writer);
 
       if (newChat) {
         const title = (message.parts[0] as TextUIPart).text;
@@ -89,7 +72,7 @@ export async function POST(request: Request) {
       }
     },
     onFinish: ({ responseMessage }) => {
-      console.log("9: ----------------> delete streamId:", streamId);
+      console.log("8: ----------------> delete streamId:", streamId);
       addMessage(chatId, responseMessage);
       redis.del(`resumable-stream:rs:sentinel:${streamId}`);
     },
@@ -99,37 +82,13 @@ export async function POST(request: Request) {
     },
   });
 
-  const stream2 = () =>
-    createUIMessageStreamResponse({
-      stream,
-      consumeSseStream: consumeStream,
-    });
-
   return new Response(
     await streamContext.resumableStream(streamId, () => {
       const response = createUIMessageStreamResponse({
         stream,
         consumeSseStream: consumeStream,
       });
-      return new ReadableStream<string>({
-        start(controller) {
-          const reader = response.body!.getReader();
-          const decoder = new TextDecoder();
-
-          function pump(): Promise<void> {
-            return reader.read().then(({ done, value }) => {
-              if (done) {
-                controller.close();
-                return;
-              }
-              controller.enqueue(decoder.decode(value, { stream: true }));
-              return pump();
-            });
-          }
-
-          return pump();
-        },
-      });
+      return convertToReadableStringStream(response.body!);
     })
   );
 }
