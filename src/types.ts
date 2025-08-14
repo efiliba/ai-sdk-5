@@ -6,8 +6,6 @@ export type Message = UIMessage<
     "new-chat-created": {
       chatId: string;
     };
-    // "new-action": Action;
-    // sources: Source[];
     "clarification-request": {
       reason: string;
     };
@@ -18,7 +16,7 @@ export type Message = UIMessage<
       title: string;
     };
     "append-message": {
-      message: string;
+      message: UIMessage;
     };
   }
 >;

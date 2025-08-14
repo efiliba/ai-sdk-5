@@ -1,4 +1,4 @@
-import type { UIMessageChunk, UIMessageStreamWriter } from "ai";
+import type { UIMessageStreamWriter } from "ai";
 
 import type { Message } from "@/types";
 

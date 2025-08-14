@@ -53,10 +53,15 @@ export const ChatWindow = ({ inputRef, chatId, initialMessages }: Props) => {
           console.log("Title updated", data.title);
           router.refresh(); // Refresh the sidebar to show the new title
           break;
-        case "data-append-message":
-          console.log("**** Append message called ****", data.message);
+        case "data-append-message": {
+          const [part] = data.message.parts;
+          console.log(
+            "**** Append message called ****",
+            part.type === "text" ? part.text : part.type
+          );
           // setMessages((prev) => [...prev, data.message]);
           break;
+        }
       }
     },
   });

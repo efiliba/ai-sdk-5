@@ -3,7 +3,6 @@ import {
   createUIMessageStreamResponse,
   consumeStream,
   type TextUIPart,
-  // createDataStream,
 } from "ai";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { after } from "next/server";
@@ -19,8 +18,6 @@ import {
   getStreamIds,
   updateChatTitle,
 } from "@/server/db/queries";
-
-const redis = new Redis(process.env.REDIS_URL!);
 
 const streamContext = createResumableStreamContext({
   waitUntil: after,
@@ -45,7 +42,6 @@ export async function POST(request: Request) {
 
   // Record stream ID to be able to resume this chat
   const streamId = await appendStreamId(chatId);
-  console.log("8: ----------------> create streamId:", streamId);
 
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
@@ -72,9 +68,7 @@ export async function POST(request: Request) {
       }
     },
     onFinish: ({ responseMessage }) => {
-      console.log("8: ----------------> delete streamId:", streamId);
       addMessage(chatId, responseMessage);
-      redis.del(`resumable-stream:rs:sentinel:${streamId}`);
     },
     onError: (e) => {
       console.error(e);
@@ -102,12 +96,12 @@ export async function GET(request: Request) {
     getStreamIds(chatId),
   ]);
 
-  // Use the most recent stream ID (first in the array since they're ordered by desc)
-  const mostRecentStreamId = streamIds.at(0)!;
+  // Use the most recent stream ID
+  const mostRecentStreamId = streamIds.at(0);
+  if (!mostRecentStreamId) {
+    return new Response(null, { status: 204 });
+  }
 
-  console.log("9: ----------------> mostRecentStreamId", mostRecentStreamId);
-
-  // Creates a readable stream if ongoing
   const stream = await streamContext.resumableStream(
     mostRecentStreamId,
     () =>
@@ -117,8 +111,6 @@ export async function GET(request: Request) {
         },
       })
   );
-
-  console.log("9: ----------------> stream FOUND", stream);
 
   // Return stream in a new response if ongoing
   if (stream) {
@@ -131,14 +123,12 @@ export async function GET(request: Request) {
     });
   }
 
-  console.log("9: ----------------> FIND THE MOST RESENT MESSAGE", stream);
-
   // Else find the most recent message
   const streamWithMessage = createUIMessageStream({
     execute: ({ writer }) => {
       writer.write({
         type: "data-append-message",
-        data: "test", //{ chatId, message: chatMessages.at(-1) },
+        data: { chatId, message: chatMessages.at(-1) },
       });
     },
   });
