@@ -2,7 +2,7 @@
 
 import { useState, RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type TextUIPart } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { Loader2 } from "lucide-react";
 
@@ -23,24 +23,19 @@ export const ChatWindow = ({ inputRef, chatId, initialMessages }: Props) => {
     id: chatId,
     resume: true,
     transport: new DefaultChatTransport({
-      prepareSendMessagesRequest({ messages }) {
-        return {
-          body: {
-            chatId,
-            newChat: messages.length === 1,
-            message: messages.at(-1),
-          },
-        };
-      },
-      prepareReconnectToStreamRequest({ id }) {
-        console.log("** Reconnect to stream **", id);
-        return {
-          api: `/api/chat?id=${chatId}`,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        };
-      },
+      prepareSendMessagesRequest: ({ messages }) => ({
+        body: {
+          chatId,
+          newChat: messages.length === 1,
+          message: messages.at(-1),
+        },
+      }),
+      prepareReconnectToStreamRequest: ({ id }) => ({
+        api: `/api/chat?id=${id}`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
     }),
     messages: initialMessages,
     onData: ({ type, data }) => {
@@ -54,10 +49,9 @@ export const ChatWindow = ({ inputRef, chatId, initialMessages }: Props) => {
           router.refresh(); // Refresh the sidebar to show the new title
           break;
         case "data-append-message": {
-          const [part] = data.message.parts;
           console.log(
             "**** Append message called ****",
-            part.type === "text" ? part.text : part.type
+            (data.message.parts[0] as TextUIPart).text
           );
           // setMessages((prev) => [...prev, data.message]);
           break;

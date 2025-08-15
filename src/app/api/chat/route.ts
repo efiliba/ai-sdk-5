@@ -106,9 +106,7 @@ export async function GET(request: Request) {
     mostRecentStreamId,
     () =>
       new ReadableStream<string>({
-        start() {
-          // Empty stream for resumable context
-        },
+        start: () => {}, // Empty stream for resumable context
       })
   );
 
@@ -133,8 +131,5 @@ export async function GET(request: Request) {
     },
   });
 
-  return createUIMessageStreamResponse({
-    stream: streamWithMessage,
-    consumeSseStream: consumeStream,
-  });
+  return createUIMessageStreamResponse({ stream: streamWithMessage });
 }
