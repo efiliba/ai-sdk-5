@@ -18,7 +18,7 @@ import {
   getStreamIds,
   updateChatTitle,
 } from "@/server/db/queries";
-import { generateChatTitle } from "@/app/ai/textGenerator";
+import { generateChatTitle } from "@/app/ai/text-generator";
 
 const streamContext = createResumableStreamContext({
   waitUntil: after,
