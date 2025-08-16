@@ -2,7 +2,7 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   consumeStream,
-  type TextUIPart,
+  // type TextUIPart,
 } from "ai";
 import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { after } from "next/server";
@@ -18,6 +18,7 @@ import {
   getStreamIds,
   updateChatTitle,
 } from "@/server/db/queries";
+import { generateChatTitle } from "@/app/ai/textGenerator";
 
 const streamContext = createResumableStreamContext({
   waitUntil: after,
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
 
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
+      let titlePromise = Promise.resolve("");
+
       // If this is a new chat, send the chat ID to the front-end
       if (newChat) {
         writer.write({
@@ -52,12 +55,13 @@ export async function POST(request: Request) {
           data: { chatId },
           transient: true, // Don't store this message in the chat history
         });
+
+        titlePromise = generateChatTitle(message);
       }
 
-      await streamMockText(writer);
+      const [title] = await Promise.all([titlePromise, streamMockText(writer)]);
 
       if (newChat) {
-        const title = (message.parts[0] as TextUIPart).text;
         await updateChatTitle(chatId, title);
 
         writer.write({
