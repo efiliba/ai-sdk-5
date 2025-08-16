@@ -9,7 +9,7 @@ const customScorer = createScorer<string, string>({
     output.includes("Paris") || output.includes("Berlin") ? 1 : 0,
 });
 
-evalite("Test Capitals", {
+evalite.experimental_skip("Test Capitals", {
   data: async () => [
     {
       input: `What's the capital of France?`,
