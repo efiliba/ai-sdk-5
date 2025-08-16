@@ -1,5 +1,6 @@
 import { Levenshtein } from "autoevals";
 import { evalite, createScorer } from "evalite";
+import { FactualityScorer } from "../evalite/factuality-scorer";
 
 const customScorer = createScorer<string, string>({
   name: "Custom scorer",
@@ -24,10 +25,10 @@ evalite("Test Capitals", {
       case input.includes("France"):
         return "It's Paris.";
       case input.includes("Germany"):
-        return "Berlin!";
+        return "Not Berlin"; // Factuality 0%, but Levenshtein 60% and custom 100%
       default:
         return "Unknown";
     }
   },
-  scorers: [customScorer, Levenshtein], // Distance between 2 strings, from 0 to 1
+  scorers: [FactualityScorer, customScorer, Levenshtein], // Distance between 2 strings, from 0 to 1
 });
