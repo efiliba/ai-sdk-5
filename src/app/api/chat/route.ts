@@ -18,7 +18,7 @@ import {
   getStreamIds,
   updateChatTitle,
 } from "@/server/db/queries";
-import { generateChatTitle } from "@/app/ai/text-generator";
+import { generateChatTitle } from "@/app/ai/text-generators";
 
 const streamContext = createResumableStreamContext({
   waitUntil: after,
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
   const stream = createUIMessageStream<Message>({
     execute: async ({ writer }) => {
-      let titlePromise = Promise.resolve("");
+      let titlePromise = Promise.resolve({ text: "" });
 
       // If this is a new chat, send the chat ID to the front-end
       if (newChat) {
@@ -59,7 +59,10 @@ export async function POST(request: Request) {
         titlePromise = generateChatTitle(message);
       }
 
-      const [title] = await Promise.all([titlePromise, streamMockText(writer)]);
+      const [{ text: title }] = await Promise.all([
+        titlePromise,
+        streamMockText(writer),
+      ]);
 
       if (newChat) {
         await updateChatTitle(chatId, title);

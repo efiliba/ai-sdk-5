@@ -36,11 +36,10 @@ export const checkFactuality = async (opts: {
 
 export const FactualityScorer = createScorer<string, string, string>({
   name: "Factuality",
-  scorer: ({ input, expected, output }) => {
-    return checkFactuality({
+  scorer: ({ input, expected, output }) =>
+    checkFactuality({
       question: input,
       groundTruth: expected!,
       submission: output,
-    });
-  },
+    }),
 });

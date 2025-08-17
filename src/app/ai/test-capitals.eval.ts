@@ -1,6 +1,6 @@
 import { Levenshtein } from "autoevals";
 import { evalite, createScorer } from "evalite";
-import { FactualityScorer } from "../evalite/factuality-scorer";
+import { FactualityScorer } from "@/app/evalite/factuality-scorer";
 
 const customScorer = createScorer<string, string>({
   name: "Custom scorer",
@@ -10,14 +10,14 @@ const customScorer = createScorer<string, string>({
 });
 
 evalite.experimental_skip("Test Capitals", {
-  data: async () => [
+  data: () => [
     {
-      input: `What's the capital of France?`,
-      expected: `Paris`,
+      input: "What's the capital of France?",
+      expected: "Paris",
     },
     {
-      input: `What's the capital of Germany?`,
-      expected: `Berlin`,
+      input: "What's the capital of Germany?",
+      expected: "Berlin",
     },
   ],
   task: (input) => {
