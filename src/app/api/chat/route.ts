@@ -8,7 +8,11 @@ import { createResumableStreamContext } from "resumable-stream/ioredis";
 import { after } from "next/server";
 import Redis from "ioredis";
 
-import { convertToReadableStringStream, streamMockText } from "@/app/utils";
+import {
+  convertToReadableStringStream,
+  resolveConcurrently,
+  streamMockText,
+} from "@/app/utils";
 import type { Message } from "@/types";
 import {
   addChat,
@@ -59,20 +63,23 @@ export async function POST(request: Request) {
         titlePromise = generateChatTitle(message);
       }
 
-      const [{ text: title }] = await Promise.all([
-        titlePromise,
-        streamMockText(writer),
+      await resolveConcurrently([
+        {
+          promise: titlePromise,
+          action: async (title) => {
+            if (newChat) {
+              await updateChatTitle(chatId, title.text);
+
+              writer.write({
+                type: "data-title-updated",
+                data: { title: title.text },
+                transient: true,
+              });
+            }
+          },
+        },
+        { promise: streamMockText(writer) },
       ]);
-
-      if (newChat) {
-        await updateChatTitle(chatId, title);
-
-        writer.write({
-          type: "data-title-updated",
-          data: { title },
-          transient: true,
-        });
-      }
     },
     onFinish: ({ responseMessage }) => {
       addMessage(chatId, responseMessage);
