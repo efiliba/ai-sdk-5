@@ -23,6 +23,7 @@ import {
   updateChatTitle,
 } from "@/server/db/queries";
 import { generateChatTitle } from "@/app/ai/text-generators";
+import { runAgentLoop } from "@/app/ai/run-agent-loop";
 
 const streamContext = createResumableStreamContext({
   waitUntil: after,
@@ -78,7 +79,13 @@ export async function POST(request: Request) {
             }
           },
         },
-        { promise: streamMockText(writer) },
+        {
+          promise: runAgentLoop([message], writer.write),
+          action: async (result) => {
+            writer.merge(result.toUIMessageStream());
+          },
+        },
+        // { promise: streamMockText(writer) },
       ]);
     },
     onFinish: ({ responseMessage }) => {

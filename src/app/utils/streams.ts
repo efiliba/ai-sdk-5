@@ -16,10 +16,6 @@ const words = [
   "an ",
   "LLM ",
   "model. ",
-  "Just ",
-  "simple ",
-  "text ",
-  "generation.",
 ];
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -32,7 +28,7 @@ async function* textGenerator() {
 }
 
 // Wraps a generator into a ReadableStream
-const createStream = <T,>(iterator: AsyncGenerator<T>) =>
+const createStream = <T>(iterator: AsyncGenerator<T>) =>
   new ReadableStream<T>({
     // async start(controller) {
     //   for await (const v of iterator) { // Eager for-loop - runs as fast as possible and no way to stop producing
@@ -66,7 +62,7 @@ export const streamMockText = async (
 
   let done = false;
   while (!done) {
-    await sleep(1000);
+    await sleep(100);
     const { value, done: isDone } = await reader.read();
     done = isDone;
 

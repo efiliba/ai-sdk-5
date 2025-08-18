@@ -56,6 +56,10 @@ export const ChatWindow = ({ inputRef, chatId, initialMessages }: Props) => {
           // setMessages((prev) => [...prev, data.message]);
           break;
         }
+        case "data-clarification-request": {
+          console.log("**** data clarification called ****", data.reason);
+          break;
+        }
       }
     },
   });
