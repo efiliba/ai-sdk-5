@@ -4,6 +4,8 @@ import { reportTrace } from "evalite/traces";
 import { generateChatTitle } from "./text-generators";
 import { Message } from "@/types";
 
+let usage: { inputTokens?: number; outputTokens?: number };
+
 evalite("Generate Chat Titles", {
   data: () => [
     {
@@ -21,6 +23,7 @@ evalite("Generate Chat Titles", {
     const start = performance.now();
 
     const result = await generateChatTitle(message);
+    usage = result.usage; // store usage to display in results
 
     reportTrace({
       start,
@@ -33,8 +36,8 @@ evalite("Generate Chat Titles", {
         },
       ],
       usage: {
-        completionTokens: result.usage.totalTokens!,
         promptTokens: result.usage.inputTokens!,
+        completionTokens: result.usage.outputTokens!,
       },
     });
 
@@ -53,6 +56,10 @@ evalite("Generate Chat Titles", {
     {
       label: "Output",
       value: output,
+    },
+    {
+      label: "Tokens",
+      value: JSON.stringify(usage),
     },
   ],
 });
